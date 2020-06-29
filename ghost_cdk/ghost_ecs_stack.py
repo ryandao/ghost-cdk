@@ -14,7 +14,7 @@ from datetime import (
     timezone
 )
 
-class GhostCdkStack(core.Stack):
+class GhostEcsStack(core.Stack):
     """Deploy a Ghost website to AWS via ECS backed by a single EC2 instance"""
 
     def __init__(self, scope: core.Construct, id: str, props, **kwargs) -> None:
@@ -23,7 +23,15 @@ class GhostCdkStack(core.Stack):
         website_url = props.get('WebsiteUrl')
         
         # The VPC where everything will live in
-        vpc = ec2.Vpc(self, 'GhostVpc', max_azs=1)
+        vpc = ec2.Vpc(
+            self, 'GhostVpc', 
+            max_azs=1,
+            subnet_configuration=[ec2.SubnetConfiguration(
+                subnet_type=ec2.SubnetType.PUBLIC,
+                name='GhostVpcPublicSubnet'
+            )],
+            cidr='10.0.0.0/16',
+        )
 
         # Create an auto scaling group to be used by the ECS cluster
         asg = self.create_asg(vpc)
@@ -55,15 +63,21 @@ class GhostCdkStack(core.Stack):
             desired_capacity=1,
         )
 
-        # Allow ingress traffic to port 80
         security_group = ec2.SecurityGroup(
             self, 'GhostSg',
             vpc=vpc,
         )
 
+        # Allow ingress traffic to port 80
         security_group.add_ingress_rule(
             peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(80),
+        )
+
+        # Allow NFS traffic for mounting EFS volumes
+        security_group.add_ingress_rule(
+            peer=ec2.Peer.ipv4('10.0.0.0/16'),
+            connection=ec2.Port.tcp(2049)
         )
 
         asg.add_security_group(security_group)

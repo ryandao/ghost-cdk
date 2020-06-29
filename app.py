@@ -2,7 +2,7 @@
 
 from aws_cdk import core
 
-from ghost_cdk.ghost_cdk_stack import GhostCdkStack
+from ghost_cdk.ghost_ecs_stack import GhostEcsStack
 from ghost_cdk.routing_stack import RoutingStack
 from ghost_cdk.monitoring_stack import MonitoringStack
 
@@ -16,7 +16,7 @@ with open(config_file_path, 'r') as f:
 
 app = core.App()
 
-ghost_stack = GhostCdkStack(app, "ghost-cdk")
+ghost_stack = GhostEcsStack(app, "ghost-ecs", configs['Ghost'])
 
 routing_props = ghost_stack.outputs.copy()
 routing_props.update(configs['Routing'])
